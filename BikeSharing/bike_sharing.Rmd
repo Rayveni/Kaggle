@@ -1,0 +1,111 @@
+---
+title: "Bike Sharing"
+author: '@BKG_6'
+date: "January 7, 2016"
+output: html_document
+---
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(dplyr); library(data.table); library(ggplot2); library(lubridate);
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+```
+
+```{r}
+# bike_data = fread("D:/DATA ANALYTICS/Kaggle/Bike Sharing/train.csv")
+bike_data = fread('/I Hard Disk/Kaggle/BikeSharing/train.csv')
+k <- bike_data
+k[, datetime := ymd_hms(datetime)]
+k[, ":=" (year = year(datetime), month = month(datetime), day = day(datetime), hour = hour(datetime), minute = minute(datetime), second = second(datetime), wday = wday(datetime, label = TRUE))][]
+# k[, year := .(year(datetime))]
+# k[, month := .(month(datetime))]
+# k[, day := .(day(datetime))]
+# k[, datetime := as.Date(datetime, '%Y-%m-%d %H:%M:%S')]
+
+```
+
+
+```{r}
+### Counts according to month and year and respective plots
+k1 = k[,  .(no_shares_month = sum(count)), by = .(year, month)]
+k1$month_name <- sapply(k1$month, function(x){return(month.name[x])})
+# k1 %>% filter(year == 2011) %>% ggplot(aes(x = ordered(month_name, month.name),  y = no_shares_month, fill = year)) + geom_bar(stat = "identity", position = "dodge")
+# k1 %>% ggplot(aes(x = ordered(month_name, month.name),  y = no_shares_month, fill = factor(year))) + geom_bar(stat = "identity", position = "dodge")
+
+k1 %>% ggplot(aes(x = ordered(month_name, month.name),  y = no_shares_month, fill = factor(year) )) + geom_bar(stat = "identity", position = "dodge")
+
+# k1 %>% ggplot(aes(x = ordered(month_name, month.name),  y = no_shares_month, fill = factor(year) )) + geom_bar(stat = "identity", position = "dodge") + facet_grid(season ~ .)
+
+```
+
+```{r}
+z <- c(2,3,4,5,13,14,16)
+k <- data.frame(k)
+k[,z] <- lapply(k[,z], as.factor) ### converst the columns into factors
+
+
+k %>% group_by(hour) %>% summarize(sum2 = mean(count)) %>% ggplot(aes(x = hour, y = sum2)) + geom_bar(stat = "identity")
+ k %>% group_by(hour) %>% summarize(sum2 = sum(count)) %>% ggplot(aes(x = hour, y = sum2)) + geom_bar(stat = "identity")
+k %>% group_by(day) %>% summarize(sum2 = mean(count)) %>% ggplot(aes(x = day, y = sum2)) + geom_bar(stat = "identity")
+```
+
+
+```{r}
+k %>% group_by(year, season) %>% summarise(sum1 = sum(count)) %>% ggplot(aes(x = season, y = sum1, fill = factor(year))) + geom_bar(stat = "identity", position = "dodge")
+
+q <- k %>% group_by(year, season) %>% summarise(sum1 = sum(casual)) %>% ggplot(aes(x = season, y = sum1, fill = factor(year))) + geom_bar(stat = "identity", position = "dodge")
+
+w <- k %>% group_by(year, season) %>% summarise(sum1 = sum(registered)) %>% ggplot(aes(x = season, y = sum1, fill = factor(year))) + geom_bar(stat = "identity", position = "dodge")
+
+### summarizing by weekday
+k %>% group_by(wday) %>% summarize(mean2 = mean(count)) %>% ggplot(aes(x = wday, y = mean2)) + geom_bar(stat = "identity")
+multiplot(q, w, col = 1)
+
+ggplot(k, aes(x = wday, y = count, fill = season)) + geom_bar(stat = "identity", position = "dodge") 
+
+
+ggplot(k, aes(x = hour, y = count, fill = season)) + geom_bar(stat = "identity") + facet_grid(season ~ .)
+```
+
+```{r}
+### Counts according to seasons
+# k2 <- data.table(k)
+# k2 <- k[, .(counts_season =sum(count)),by = season]
+# k2 %>% ggplot(aes(x = factor(season), y = counts_season)) + geom_bar(stat = "identity", fill = "blue")
+
+# k3 <- k1[, .(counts_season_month = ), by = .(year, month, season)]
+```
+
